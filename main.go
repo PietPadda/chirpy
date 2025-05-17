@@ -44,20 +44,20 @@ func main() {
 	// mux.Handle("/app/", ...) -- server handle all requests
 
 	// REGISTER HANDLERS
-	// register handlerReadiness, using /healthz system endpoint
+	// register handlerReadiness, using api/healthz system endpoint
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)
 	// GET HTTP method routing only
-	// /healthz, because "system endpoint" convention!
+	// healthz, because "system endpoint" convention!
 
-	// register handlerMetrics, using /metrics system endpoint
-	mux.HandleFunc("GET /api/metrics", apiCfg.handlerMetrics) // register func that receives apiCfg
+	// register handlerMetrics, using admin/metrics system endpoint
+	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics) // register func that receives apiCfg
 	// GET HTTP method routing only
-	// /metrics, no z as this is a conventional name!
+	// metrics, no z, as this is a conventional name!
 
-	// register handlerMetricsReset, using /reset system endpoint
-	mux.HandleFunc("POST /api/reset", apiCfg.handlerMetricsReset) // register func that receives apiCfg
+	// register handlerMetricsReset, using admin/reset system endpoint
+	mux.HandleFunc("POST /admin/reset", apiCfg.handlerMetricsReset) // register func that receives apiCfg
 	// POST HTTP method routing only
-	// /reset, no z as this is a conventional name!
+	// reset, no z as this is a conventional name!
 
 	// create Server struct for config
 	server := &http.Server{ //ptr is more efficient than new copy

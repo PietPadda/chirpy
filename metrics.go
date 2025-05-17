@@ -4,14 +4,13 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 )
 
 // Metrics handler that returns the fileserver hits!
 // apply cfg receiver to access fileserverHits
 func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, req *http.Request) {
 	// set header
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 	// write the header (status code or "health")
 	w.WriteHeader(http.StatusOK)
@@ -19,11 +18,18 @@ func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, req *http.Request) {
 	// can skip, will happen implicitly
 
 	// get fileserverhits
-	x := cfg.fileserverHits.Load()     // safely load the number of hits
-	serverhits := strconv.Itoa(int(x)) // convert to string, make int as was int32
+	x := cfg.fileserverHits.Load() // safely load the number of hits
 
 	// write the response body
-	w.Write([]byte(fmt.Sprintf("Hits: %v", serverhits)))
+	// use backticks to handle multiline printing
+	fmt.Fprintf(w, `
+	<html>
+      <body>
+        <h1>Welcome, Chirpy Admin</h1>
+        <p>Chirpy has been visited %d times!</p>
+      </body>
+    </html>
+	`, x)
 }
 
 // MIDDLEWARE
