@@ -45,17 +45,17 @@ func main() {
 
 	// REGISTER HANDLERS
 	// register handlerReadiness, using /healthz system endpoint
-	mux.HandleFunc("GET /healthz", handlerReadiness)
+	mux.HandleFunc("GET /api/healthz", handlerReadiness)
 	// GET HTTP method routing only
 	// /healthz, because "system endpoint" convention!
 
 	// register handlerMetrics, using /metrics system endpoint
-	mux.HandleFunc("GET /metrics", apiCfg.handlerMetrics) // register func that receives apiCfg
+	mux.HandleFunc("GET /api/metrics", apiCfg.handlerMetrics) // register func that receives apiCfg
 	// GET HTTP method routing only
 	// /metrics, no z as this is a conventional name!
 
 	// register handlerMetricsReset, using /reset system endpoint
-	mux.HandleFunc("POST /reset", apiCfg.handlerMetricsReset) // register func that receives apiCfg
+	mux.HandleFunc("POST /api/reset", apiCfg.handlerMetricsReset) // register func that receives apiCfg
 	// POST HTTP method routing only
 	// /reset, no z as this is a conventional name!
 
