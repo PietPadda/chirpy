@@ -59,6 +59,10 @@ func main() {
 	// POST HTTP method routing only
 	// reset, no z as this is a conventional name!
 
+	// register handlerValidateChirp, using api/validate_chirps system endpoint
+	mux.HandleFunc("POST /api/validate_chirp", handlerValidateChirp)
+	// POST HTTP method routing only
+
 	// create Server struct for config
 	server := &http.Server{ //ptr is more efficient than new copy
 		Addr:    ":" + port, //server listens to port 8080 for all incoming requests
