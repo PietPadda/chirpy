@@ -8,7 +8,7 @@ type JsonRequest struct {
 }
 
 type JsonResponse struct {
-	Valid bool `json:"valid"`
+	CleanedBody string `json:"cleaned_body"`
 }
 
 type JsonResponseError struct {

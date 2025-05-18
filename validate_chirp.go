@@ -6,9 +6,10 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 )
 
-// ValidateChirp handler that handles json reqs and resps!
+// ValidateChirp handler that handles json reqs and resp!
 func handlerValidateChirp(w http.ResponseWriter, req *http.Request) {
 	// consts
 	const maxMessageLimit = 140
@@ -67,21 +68,25 @@ func handlerValidateChirp(w http.ResponseWriter, req *http.Request) {
 		return // early return
 	}
 
+	// clean the request body
+	bodyClean := cleanProfanity(reqBody.Body)
+
 	// json response to
-	respBody := JsonResponse{Valid: true} // set resp to valid as req is successful
+	respBody := JsonResponse{CleanedBody: bodyClean} // set resp to valid as req is successful
 
 	// helper to insert body response + 200 ok status code
 	writeJSONResponse(w, respBody, http.StatusOK)
 }
 
+// HELPER FUNCS
 // ERROR helper to make the API much more DRY
 func writeJSONError(w http.ResponseWriter, message string, statusCode int) {
 	respError := JsonResponseError{Error: message}
 
-	// marshal the go responserror to json, removing whitespaces
+	// marshal the go response error to json, removing whitespaces
 	dat, err := json.Marshal(respError)
 
-	// marhsal check
+	// marshall check
 	if err != nil {
 		log.Printf("Error marshalling JSON: %s", err) // log msg with err
 		w.WriteHeader(http.StatusInternalServerError) // status code
@@ -100,7 +105,7 @@ func writeJSONResponse(w http.ResponseWriter, payload interface{}, statusCode in
 	// marshal the go response to json, removing whitespaces
 	dat, err := json.Marshal(payload)
 
-	// marhsal check
+	// marshall check
 	if err != nil {
 		log.Printf("Error marshalling JSON: %s", err) // log msg with err
 		w.WriteHeader(http.StatusInternalServerError) // status code
@@ -113,4 +118,39 @@ func writeJSONResponse(w http.ResponseWriter, payload interface{}, statusCode in
 	w.Header().Set("Content-Type", "application/json") // set header to json
 	w.WriteHeader(statusCode)                          // status code
 	w.Write(dat)                                       // write the response body
+}
+
+// RESPONSE helper to clean profanity before passing payload to response
+func cleanProfanity(body string) string {
+	// split the body
+	words := strings.Split(body, " ") // split to list by space " "
+
+	// profanity list
+	profanityList := []string{
+		"kerfuffle",
+		"sharbert",
+		"fornax",
+	}
+
+	// check each word in body
+	for i, word := range words {
+		// lowercase the word
+		wordLower := strings.ToLower(word)
+
+		// compare lowercase word with lowercase profanity
+		for _, profanity := range profanityList {
+
+			// if it matches any of the profane words
+			if wordLower == profanity {
+				words[i] = "****" // replace it
+				break             // stop checking other profanity, already matched
+			}
+		}
+	}
+
+	// rejoin the cleaned slice
+	cleanedWords := strings.Join(words, " ")
+
+	// return the cleaned slice of words
+	return cleanedWords
 }
