@@ -4,21 +4,51 @@ package main
 import (
 	// std go libraries
 	// for printing
-	"log"      // for err loggin
+	"database/sql"
+	"log"      // for err logging
 	"net/http" // http protocol
+	"os"       // for io
 
 	// for conv itoa or atoi
 	"sync/atomic" // allows safe incr + read of ints for goroutines
+
+	// driver init
+	"github.com/PietPadda/chirpy/internal/database"
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq" // postgresql driver
 )
 
 // STRUCTS
 // stateful struct
 type apiConfig struct {
 	fileserverHits atomic.Int32
+	db             *database.Queries
 }
 
 // MAIN
 func main() {
+	// load our .env file
+	godotenv.Load() // loads it into the os environment for current program to use
+
+	// get db_url for .env file
+	dbURL := os.Getenv("DB_URL") // reaches into os env and gets the value at key
+
+	// dbURL check
+	if dbURL == "" {
+		log.Fatal("DB_URL is not set")
+	}
+
+	// open connection to your database using the DBUrl and driver
+	db, err := sql.Open("postgres", dbURL)
+
+	// db connection check
+	if err != nil {
+		log.Fatal("error connecting to db:", err)
+	}
+
+	// use SQLC database package
+	dbQueries := database.New(db)
+
 	// set constants
 	const filepathRoot = "." // used constant
 	const port = "8080"
@@ -29,6 +59,7 @@ func main() {
 	// create apiConfig instance
 	apiCfg := apiConfig{
 		fileserverHits: atomic.Int32{}, // explicitly set to 0
+		db:             dbQueries,      // init the dbqueries for use in our handler
 	}
 
 	// create the file server handle
@@ -74,12 +105,12 @@ func main() {
 	// print msg before blocking with "Listen"
 
 	// start the server
-	err := server.ListenAndServe() // "listens" to http requests on addr and let's mux handle them
+	err = server.ListenAndServe() // "listens" to http requests on addr and let's mux handle them
 	// listen blocks the server to prevent ending main func
 
 	// server start check
 	if err != nil {
 		// log the err and terminate server
-		log.Fatal(err)
+		log.Fatal("error starting server:", err)
 	}
 }
