@@ -100,6 +100,55 @@ func (apiCfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, req *http.Req
 	WriteJSONResponse(w, respChirp, http.StatusCreated)
 }
 
+// GetChirps handler that returns all chirps!
+func (apiCfg *apiConfig) handlerGetChirps(w http.ResponseWriter, req *http.Request) {
+	// apiConfig check
+	if apiCfg == nil {
+		// handle gracefully
+		log.Printf("Internal server error: apiCfg is nil") // msg to server admin
+		// send msg to client code 500
+		WriteJSONError(w, "Internal server configuration error", http.StatusInternalServerError)
+		return // stop processing req
+	}
+
+	// HTTP method check
+	if req.Method != "GET" {
+		// helper to insert error msg + 405 invalid method status code
+		WriteJSONError(w, "Chirps must be GETted", http.StatusMethodNotAllowed)
+		return // early return
+	}
+
+	// get (all) chirps!
+	dbChirps, err := apiCfg.db.GetChirps(req.Context())
+
+	// get chirps check
+	if err != nil {
+		log.Printf("Error getting all chirps: %s", err) // log msg with err
+		// helper to insert error msg + 400 bad req status code
+		WriteJSONError(w, "Error occurred getting all chirps", http.StatusBadRequest)
+		return // early return
+	}
+
+	// init a pre-allocated slice (not nil or zero!) all fields 0'd to store all chirps
+	chirpResponses := make([]JsonChirpResponse, len(dbChirps))
+	// pre-alloc mem to # of chirps, no less, no more -- mem efficient!
+
+	// loop thru chirps and add each as an element
+	for i, dbChirp := range dbChirps {
+		// make a response for each chirp at index i
+		chirpResponses[i] = JsonChirpResponse{
+			ID:        dbChirp.ID,
+			CreatedAt: dbChirp.CreatedAt,
+			UpdatedAt: dbChirp.UpdatedAt,
+			Body:      dbChirp.Body,
+			UserID:    dbChirp.UserID,
+		}
+	}
+
+	// helper to insert body response + 200 OK status code
+	WriteJSONResponse(w, chirpResponses, http.StatusOK)
+}
+
 // HELPER FUNCS
 
 // RESPONSE helper to clean profanity before passing payload to response

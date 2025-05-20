@@ -12,3 +12,9 @@ VALUES (
 )
 -- func generated will return these values for use in code
 RETURNING *;
+
+-- name: GetChirps :many
+-- select all chirps!
+SELECT * FROM chirps
+-- oldest to latest based on created_at
+ORDER BY created_at ASC;
