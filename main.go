@@ -109,8 +109,8 @@ func main() {
 	// POST HTTP method routing only
 	// reset, no z as this is a conventional name!
 
-	// register handlerValidateChirp, using api/validate_chirps system endpoint
-	mux.HandleFunc("POST /api/validate_chirp", handlerValidateChirp)
+	// register handlerCreateChirp, using /api/chirps system endpoint
+	mux.HandleFunc("POST /api/chirps", apiCfg.handlerCreateChirp) // register func that receives apiCfg
 	// POST HTTP method routing only
 
 	// register handlerCreateUser, using api/users system endpoint

@@ -1,4 +1,4 @@
-// validate_chirp.go
+// chirps.go
 package main
 
 import (
@@ -7,10 +7,12 @@ import (
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/PietPadda/chirpy/internal/database"
 )
 
-// ValidateChirp handler that handles json reqs and resp!
-func handlerValidateChirp(w http.ResponseWriter, req *http.Request) {
+// CreateChirp handler that creates a chirp (keep ValidateChirp logic)
+func (apiCfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, req *http.Request) {
 	// consts
 	const maxMessageLimit = 140
 
@@ -22,7 +24,7 @@ func handlerValidateChirp(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// json request from client
-	var reqBody JsonRequest
+	var reqBody JsonChirpRequest
 
 	// create json req body decoder
 	decoder := json.NewDecoder(req.Body)
@@ -71,11 +73,31 @@ func handlerValidateChirp(w http.ResponseWriter, req *http.Request) {
 	// clean the request body
 	bodyClean := cleanProfanity(reqBody.Body)
 
-	// json response to
-	respBody := JsonResponse{CleanedBody: bodyClean} // set resp to valid as req is successful
+	// create chirp
+	newChirp, err := apiCfg.db.CreateChirp(req.Context(), database.CreateChirpParams{
+		Body:   bodyClean,      // add the profanity cleaned chirp body
+		UserID: reqBody.UserID, // get user_id for fk from the json request body
+	})
 
-	// helper to insert body response + 200 ok status code
-	WriteJSONResponse(w, respBody, http.StatusOK)
+	// create chirp check
+	if err != nil {
+		log.Printf("Error creating chirp: %s", err) // log msg with err
+		// helper to insert error msg + 400 bad req status code
+		WriteJSONError(w, "Error occurred creating new chirp", http.StatusBadRequest)
+		return // early return
+	}
+
+	// json response payload
+	respChirp := JsonChirpResponse{
+		ID:        newChirp.ID,
+		CreatedAt: newChirp.CreatedAt,
+		UpdatedAt: newChirp.UpdatedAt,
+		Body:      newChirp.Body,
+		UserID:    newChirp.UserID,
+	}
+
+	// helper to insert body response + 201 created status code
+	WriteJSONResponse(w, respChirp, http.StatusCreated)
 }
 
 // HELPER FUNCS

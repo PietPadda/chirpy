@@ -1,4 +1,4 @@
-// validate_chirp_test.go
+// chirps_test.go
 
 package main
 
