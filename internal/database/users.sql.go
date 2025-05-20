@@ -18,18 +18,30 @@ VALUES (
     NOW(),             -- current time
     $1                 -- gen code will input email
 )
-RETURNING id, create_at, updated_at, email
+RETURNING id, created_at, updated_at, email
 `
 
 // users.sql
+// add "one" user to the DB by email address
+// func generated will return these values for use in code
 func (q *Queries) CreateUser(ctx context.Context, email string) (User, error) {
 	row := q.db.QueryRowContext(ctx, createUser, email)
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.CreateAt,
+		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Email,
 	)
 	return i, err
+}
+
+const resetUsers = `-- name: ResetUsers :exec
+DELETE FROM users
+`
+
+// "reset" all users
+func (q *Queries) ResetUsers(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, resetUsers)
+	return err
 }

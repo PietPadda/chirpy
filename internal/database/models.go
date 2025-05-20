@@ -12,7 +12,7 @@ import (
 
 type User struct {
 	ID        uuid.UUID
-	CreateAt  time.Time
+	CreatedAt time.Time
 	UpdatedAt time.Time
 	Email     string
 }

@@ -8,12 +8,14 @@ import (
 	"log"      // for err logging
 	"net/http" // http protocol
 	"os"       // for io
+	"time"
 
 	// for conv itoa or atoi
 	"sync/atomic" // allows safe incr + read of ints for goroutines
 
 	// driver init
 	"github.com/PietPadda/chirpy/internal/database"
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq" // postgresql driver
 )
@@ -23,6 +25,15 @@ import (
 type apiConfig struct {
 	fileserverHits atomic.Int32
 	db             *database.Queries
+	platform       string
+}
+
+// user database struct
+type User struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Email     string    `json:"email"`
 }
 
 // MAIN
@@ -30,12 +41,19 @@ func main() {
 	// load our .env file
 	godotenv.Load() // loads it into the os environment for current program to use
 
-	// get db_url for .env file
-	dbURL := os.Getenv("DB_URL") // reaches into os env and gets the value at key
+	// get fields from .env file
+	dbURL := os.Getenv("DB_URL")
+	appPlatform := os.Getenv("PLATFORM")
+	// reaches into os env and gets the value at key
 
 	// dbURL check
 	if dbURL == "" {
 		log.Fatal("DB_URL is not set")
+	}
+
+	// Platform check
+	if appPlatform == "" {
+		log.Fatal("Platform is not set")
 	}
 
 	// open connection to your database using the DBUrl and driver
@@ -60,6 +78,7 @@ func main() {
 	apiCfg := apiConfig{
 		fileserverHits: atomic.Int32{}, // explicitly set to 0
 		db:             dbQueries,      // init the dbqueries for use in our handler
+		platform:       appPlatform,    // init the platform for handler auth
 	}
 
 	// create the file server handle
@@ -85,13 +104,17 @@ func main() {
 	// GET HTTP method routing only
 	// metrics, no z, as this is a conventional name!
 
-	// register handlerMetricsReset, using admin/reset system endpoint
-	mux.HandleFunc("POST /admin/reset", apiCfg.handlerMetricsReset) // register func that receives apiCfg
+	// register handlerAdminUsersReset, using admin/reset system endpoint
+	mux.HandleFunc("POST /admin/reset", apiCfg.handlerAdminUsersReset) // register func that receives apiCfg
 	// POST HTTP method routing only
 	// reset, no z as this is a conventional name!
 
 	// register handlerValidateChirp, using api/validate_chirps system endpoint
 	mux.HandleFunc("POST /api/validate_chirp", handlerValidateChirp)
+	// POST HTTP method routing only
+
+	// register handlerCreateUser, using api/users system endpoint
+	mux.HandleFunc("POST /api/users", apiCfg.handlerCreateUser) // register func that receives apiCfg
 	// POST HTTP method routing only
 
 	// create Server struct for config

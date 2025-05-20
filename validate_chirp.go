@@ -17,7 +17,7 @@ func handlerValidateChirp(w http.ResponseWriter, req *http.Request) {
 	// HTTP method check
 	if req.Method != "POST" {
 		// helper to insert error msg + 405 invalid method status code
-		writeJSONError(w, "Chirp must be POSTed", http.StatusMethodNotAllowed)
+		WriteJSONError(w, "Chirp must be POSTed", http.StatusMethodNotAllowed)
 		return // early return
 	}
 
@@ -37,7 +37,7 @@ func handlerValidateChirp(w http.ResponseWriter, req *http.Request) {
 	if err == io.EOF { // end of file
 		log.Printf("Error empty request body: %s", err) // log msg with err
 		// helper to insert error msg + 400 bad req status code
-		writeJSONError(w, "Chirp is empty", http.StatusBadRequest)
+		WriteJSONError(w, "Chirp is empty", http.StatusBadRequest)
 		return // early return
 	}
 
@@ -48,7 +48,7 @@ func handlerValidateChirp(w http.ResponseWriter, req *http.Request) {
 
 		log.Printf("Error decoding parameters: %s", err) // log msg with err
 		// helper to insert error msg + 400 bad req status code
-		writeJSONError(w, "Something went wrong", http.StatusBadRequest)
+		WriteJSONError(w, "Something went wrong", http.StatusBadRequest)
 		return // early return
 	}
 
@@ -57,14 +57,14 @@ func handlerValidateChirp(w http.ResponseWriter, req *http.Request) {
 	// check chirp empty
 	if len(reqBody.Body) == 0 {
 		// helper to insert error msg + 400 bad req status code
-		writeJSONError(w, "Chirp is empty", http.StatusBadRequest)
+		WriteJSONError(w, "Chirp is empty", http.StatusBadRequest)
 		return // early return
 	}
 
 	// check chirp too long
 	if len(reqBody.Body) > maxMessageLimit {
 		// helper to insert error msg + 400 bad req status code
-		writeJSONError(w, "Chirp is too long", http.StatusBadRequest)
+		WriteJSONError(w, "Chirp is too long", http.StatusBadRequest)
 		return // early return
 	}
 
@@ -75,50 +75,10 @@ func handlerValidateChirp(w http.ResponseWriter, req *http.Request) {
 	respBody := JsonResponse{CleanedBody: bodyClean} // set resp to valid as req is successful
 
 	// helper to insert body response + 200 ok status code
-	writeJSONResponse(w, respBody, http.StatusOK)
+	WriteJSONResponse(w, respBody, http.StatusOK)
 }
 
 // HELPER FUNCS
-// ERROR helper to make the API much more DRY
-func writeJSONError(w http.ResponseWriter, message string, statusCode int) {
-	respError := JsonResponseError{Error: message}
-
-	// marshal the go response error to json, removing whitespaces
-	dat, err := json.Marshal(respError)
-
-	// marshall check
-	if err != nil {
-		log.Printf("Error marshalling JSON: %s", err) // log msg with err
-		w.WriteHeader(http.StatusInternalServerError) // status code
-		return                                        // early return
-	}
-
-	// respError is now successfully populated
-	w.Header().Set("Content-Type", "application/json") // set header to json
-	w.WriteHeader(statusCode)                          // status code
-	w.Write(dat)                                       // write the response error
-}
-
-// RESPONSE helper to make the API much more DRY
-// payload to allow ANY type of struct as input
-func writeJSONResponse(w http.ResponseWriter, payload interface{}, statusCode int) {
-	// marshal the go response to json, removing whitespaces
-	dat, err := json.Marshal(payload)
-
-	// marshall check
-	if err != nil {
-		log.Printf("Error marshalling JSON: %s", err) // log msg with err
-		w.WriteHeader(http.StatusInternalServerError) // status code
-		return                                        // early return
-	}
-
-	// respBody is now successfully populated
-
-	// send the server response to client
-	w.Header().Set("Content-Type", "application/json") // set header to json
-	w.WriteHeader(statusCode)                          // status code
-	w.Write(dat)                                       // write the response body
-}
 
 // RESPONSE helper to clean profanity before passing payload to response
 func cleanProfanity(body string) string {
