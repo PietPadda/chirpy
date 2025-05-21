@@ -94,17 +94,17 @@ func main() {
 	// mux.Handle("/app/", ...) -- server handle all requests
 
 	// REGISTER HANDLERS
-	// register handlerReadiness, using api/healthz system endpoint
+	// register handlerReadiness, using /api/healthz system endpoint
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)
 	// GET HTTP method routing only
 	// healthz, because "system endpoint" convention!
 
-	// register handlerMetrics, using admin/metrics system endpoint
+	// register handlerMetrics, using /admin/metrics system endpoint
 	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics) // register func that receives apiCfg
 	// GET HTTP method routing only
 	// metrics, no z, as this is a conventional name!
 
-	// register handlerAdminUsersReset, using admin/reset system endpoint
+	// register handlerAdminUsersReset, using /admin/reset system endpoint
 	mux.HandleFunc("POST /admin/reset", apiCfg.handlerAdminUsersReset) // register func that receives apiCfg
 	// POST HTTP method routing only
 	// reset, no z as this is a conventional name!
@@ -121,8 +121,12 @@ func main() {
 	mux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.handlerGetChirp) // register func that receives apiCfg
 	// GET HTTP method routing only
 
-	// register handlerCreateUser, using api/users system endpoint
+	// register handlerCreateUser, using /api/users system endpoint
 	mux.HandleFunc("POST /api/users", apiCfg.handlerCreateUser) // register func that receives apiCfg
+	// POST HTTP method routing only
+
+	// register handlerLoginUser, using /api/users system endpoint
+	mux.HandleFunc("POST /api/login", apiCfg.handlerUserLogin) // register func that receives apiCfg
 	// POST HTTP method routing only
 
 	// create Server struct for config
