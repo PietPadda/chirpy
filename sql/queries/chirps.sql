@@ -18,3 +18,9 @@ RETURNING *;
 SELECT * FROM chirps
 -- oldest to latest based on created_at
 ORDER BY created_at ASC;
+
+-- name: GetChirp :one
+-- select one chirp by id
+SELECT * FROM chirps
+-- by chirp id as input
+WHERE id = $1;

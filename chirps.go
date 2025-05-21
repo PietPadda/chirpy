@@ -2,13 +2,16 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"net/http"
 	"strings"
 
 	"github.com/PietPadda/chirpy/internal/database"
+	"github.com/google/uuid"
 )
 
 // CreateChirp handler that creates a chirp (keep ValidateChirp logic)
@@ -147,6 +150,70 @@ func (apiCfg *apiConfig) handlerGetChirps(w http.ResponseWriter, req *http.Reque
 
 	// helper to insert body response + 200 OK status code
 	WriteJSONResponse(w, chirpResponses, http.StatusOK)
+}
+
+// GetChirp handler that returns one chirp by id
+func (apiCfg *apiConfig) handlerGetChirp(w http.ResponseWriter, req *http.Request) {
+	// apiConfig check
+	if apiCfg == nil {
+		// handle gracefully
+		log.Printf("Internal server error: apiCfg is nil") // msg to server admin
+		// send msg to client code 500
+		WriteJSONError(w, "Internal server configuration error", http.StatusInternalServerError)
+		return // stop processing req
+	}
+
+	// HTTP method check
+	if req.Method != "GET" {
+		// helper to insert error msg + 405 invalid method status code
+		WriteJSONError(w, "Chirp must be GETted", http.StatusMethodNotAllowed)
+		return // early return
+	}
+
+	// get chirp id from api endpoint path string
+	chirpIDStr := req.PathValue("chirpID")
+
+	// conv str to UUID to use GetChirp
+	chirpUUID, err := uuid.Parse(chirpIDStr)
+
+	// uuid conv check
+	if err != nil {
+		log.Printf("Error getting chirp ID: %s", err) // log msg with err
+		// helper to insert error msg + 400 bad req status code
+		WriteJSONError(w, "Invalid chirp ID format", http.StatusBadRequest)
+		return // early return
+	}
+
+	// get (one) chirps
+	dbChirp, err := apiCfg.db.GetChirp(req.Context(), chirpUUID)
+
+	// Check if this is a 404 "not found" error
+	if errors.Is(err, sql.ErrNoRows) {
+		log.Printf("Error could not find chirp: %s", err) // log msg with err
+		// helper to insert error msg + 404 not found status code
+		WriteJSONError(w, "Chirp not found", http.StatusNotFound)
+		return
+	}
+
+	// get chirps check
+	if err != nil {
+		log.Printf("Error getting chirp: %s", err) // log msg with err
+		// helper to insert error msg + 500 internal error status code
+		WriteJSONError(w, "Error occurred getting chirp", http.StatusInternalServerError)
+		return // early return
+	}
+
+	// build the chirp response
+	chirpResp := JsonChirpResponse{
+		ID:        dbChirp.ID,
+		CreatedAt: dbChirp.CreatedAt,
+		UpdatedAt: dbChirp.UpdatedAt,
+		Body:      dbChirp.Body,
+		UserID:    dbChirp.UserID,
+	}
+
+	// helper to insert body response + 200 OK status code
+	WriteJSONResponse(w, chirpResp, http.StatusOK)
 }
 
 // HELPER FUNCS
