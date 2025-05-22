@@ -2,9 +2,15 @@
 package auth
 
 import (
+	"errors"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
+// PASSWORD HASHING
 // func to hash a user's password
 func HashPassword(password string) (string, error) {
 	// use bcrypt's pw gen -- accepts a byte (max 72) and cost (1-31)
@@ -27,4 +33,80 @@ func CheckPasswordHash(hash, password string) error {
 
 	// we return the resulting error (and let the func caller handle it)
 	return err
+}
+
+// GENERATE AND VERIFY JWT TOKENS
+// generate jwt token on server to send to user
+func MakeJWT(userID uuid.UUID, tokenSecret string, expiresIn time.Duration) (string, error) {
+	// the signing key
+	signingKey := []byte(tokenSecret)
+
+	// HMAC HS256 signing method
+	signingMethod := jwt.SigningMethodHS256
+
+	// create registered claims
+	claims := &jwt.RegisteredClaims{
+		Issuer:    "chirpy",                                      // issuer = our application
+		IssuedAt:  jwt.NewNumericDate(time.Now()),                // current time
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiresIn)), // current time + expiration time
+		Subject:   userID.String(),                               // stringified version of user id
+	}
+
+	// create JWT token using signing method and registered claim
+	token := jwt.NewWithClaims(signingMethod, claims)
+
+	// sign the token with secret key
+	tokenString, err := token.SignedString(signingKey)
+
+	// token sign check
+	if err != nil {
+		return "", err // failed to sign token with secret ke
+	}
+	// low level func, let high levels handle the error
+
+	// successfully created signed jwt token
+	return tokenString, nil
+}
+
+// validate jwt token returned from user
+func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
+	// create empty claims struct to be populated
+	claims := &jwt.RegisteredClaims{} // ptr because ParseWithClaims requires it
+
+	// parse the user's jwt token claims, validates it, then returns the parsed token
+	tokenParse, err := jwt.ParseWithClaims(tokenString, claims, func(tokenParse *jwt.Token) (interface{}, error) {
+		// return secret key a byte slice
+		return []byte(tokenSecret), nil
+	}) // anon func takes token from ParseWithClaims and returns the secret key as byte slice
+
+	// check token claims parse
+	if err != nil {
+		return uuid.Nil, err // nil id
+	}
+
+	// Use a type assertion to get the claims as *jwt.RegisteredClaims
+	token, ok := tokenParse.Claims.(*jwt.RegisteredClaims)
+	// tokenParse.Claims is of type jwt.Claims (interface)
+
+	// type assertion check
+	if !ok {
+		return uuid.Nil, errors.New("invalid token claims") // nil id
+	} // use custom err, not just "err" (from previous check...)
+
+	// token expiration check
+	if time.Now().After(token.ExpiresAt.Time) {
+		return uuid.Nil, errors.New("token has expired") // nil id
+	} // use custom err, not just "err" (from previous check...)
+
+	// convert userid (subject) to uuid
+	userID, err := uuid.Parse(token.Subject)
+
+	// uuid parse check
+	if err != nil {
+		return uuid.Nil, err // nil id
+	}
+
+	// return userid (subject) as uuid from the populate claims
+	// validation confirms which user this JWT belongs to
+	return userID, nil
 }
