@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/PietPadda/chirpy/internal/auth"
 	"github.com/PietPadda/chirpy/internal/database"
 	"github.com/google/uuid"
 )
@@ -29,6 +30,28 @@ func (apiCfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, req *http.Req
 	// json request from client
 	var reqBody JsonChirpRequest
 
+	// authenticate before decoding request
+	token, err := auth.GetBearerToken(req.Header) // get the bearer's token
+
+	// get token check
+	if err != nil {
+		log.Printf("Error getting bearer token: %s", err) // log msg with err
+		// helper to insert error msg + 401 unauthorized status code
+		WriteJSONError(w, "Unauthorized access", http.StatusUnauthorized)
+		return // early return
+	}
+
+	// validate the JWT token after getting bearer's token
+	uuidJWTValidated, err := auth.ValidateJWT(token, apiCfg.serverKey) // pass in tokenstring and server secret
+
+	// jwt validation check
+	if err != nil {
+		log.Printf("Error validating JWT token: %s", err) // log msg with err
+		// helper to insert error msg + 401 unauthorized status code
+		WriteJSONError(w, "Unauthorized access", http.StatusUnauthorized)
+		return // early return
+	}
+
 	// create json req body decoder
 	decoder := json.NewDecoder(req.Body)
 
@@ -36,7 +59,7 @@ func (apiCfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, req *http.Req
 	defer req.Body.Close()
 
 	// decode the req body
-	err := decoder.Decode(&reqBody)
+	err = decoder.Decode(&reqBody)
 
 	// request body missing edge case check (before general error check)
 	if err == io.EOF { // end of file
@@ -78,9 +101,9 @@ func (apiCfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, req *http.Req
 
 	// create chirp
 	newChirp, err := apiCfg.db.CreateChirp(req.Context(), database.CreateChirpParams{
-		Body:   bodyClean,      // add the profanity cleaned chirp body
-		UserID: reqBody.UserID, // get user_id for fk from the json request body
-	})
+		Body:   bodyClean,        // add the profanity cleaned chirp body
+		UserID: uuidJWTValidated, // get user_id from the VALIDATED JWT!
+	}) // we ignore the request's userid and ONLY use the VALIDATED userid!
 
 	// create chirp check
 	if err != nil {

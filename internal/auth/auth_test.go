@@ -3,6 +3,7 @@
 package auth
 
 import (
+	"net/http"
 	"strings"
 	"testing" // importing testing package for unit tests
 	"time"
@@ -157,5 +158,105 @@ func TestValidateJWTExpiredToken(t *testing.T) {
 	// validate token check
 	if err == nil {
 		t.Fatalf("ValidateJWT failed to invalidate expired key: %v", err) // fatal, don't continue
+	}
+}
+
+// JSON WEB TOKEN BEARER GET
+// test GetBearerToken
+func TestGetBearerToken(t *testing.T) {
+	// build test cases
+	testCases := []struct {
+		name          string      // name for test case
+		headers       http.Header // input to func
+		expectedToken string      // token string we want our func to return
+		expectErr     bool        // false if err == nil, true if err != nil
+	}{ // }{ -- inits the test values for input vs expected
+		{
+			name: "Test case: Correct Header",
+			headers: func() http.Header {
+				h := http.Header{}
+				h.Set("Authorization", "Bearer correctToken")
+				return h
+			}(), // func () http.Header {...}() -- anon func with no input
+			expectedToken: "correctToken",
+			expectErr:     false,
+		},
+		{
+			name: "Test case: Whitespaces Parsed",
+			headers: func() http.Header {
+				h := http.Header{}
+				h.Set("Authorization", "           Bearer   correctToken    ")
+				return h
+			}(),
+			expectedToken: "correctToken",
+			expectErr:     false,
+		},
+		{
+			name: "Test case: Missing Header Type",
+			headers: func() http.Header {
+				h := http.Header{}
+				h.Set("", "Bearer correctToken")
+				return h
+			}(),
+			expectedToken: "",
+			expectErr:     true,
+		},
+		{
+			name: "Test case: Missing Token String",
+			headers: func() http.Header {
+				h := http.Header{}
+				h.Set("Authorization", "Bearer")
+				return h
+			}(),
+			expectedToken: "",
+			expectErr:     true,
+		},
+		{
+			name: "Test case: Bearer with one space",
+			headers: func() http.Header {
+				h := http.Header{}
+				h.Set("Authorization", "Bearer ")
+				return h
+			}(),
+			expectedToken: "",
+			expectErr:     true,
+		},
+		{
+			name: "Test case: Malformed Header String -- Not Bearer",
+			headers: func() http.Header {
+				h := http.Header{}
+				h.Set("Authorization", "Bearbobaggins correctToken")
+				return h
+			}(),
+			expectedToken: "",
+			expectErr:     true,
+		},
+		{
+			name: "Test case: Malformed Header String -- Extra Arguments",
+			headers: func() http.Header {
+				h := http.Header{}
+				h.Set("Authorization", "Bearbobaggins correctToken Hackthesystem")
+				return h
+			}(),
+			expectedToken: "",
+			expectErr:     true,
+		},
+	}
+
+	// loop through test cases
+	for _, tc := range testCases {
+
+		// pass tc into GetBearerToken and get token string and error bool
+		gotValue, gotErr := GetBearerToken(tc.headers)
+
+		// check if err bool matches the expected err
+		if (gotErr != nil) != tc.expectErr {
+			t.Errorf("%s: error = %v, expectErr %v", tc.name, gotErr, tc.expectErr)
+		} // if we get nil, and it's not nil, we get false. if we expect true, test will error!
+
+		// check if token string matches expected
+		if gotValue != tc.expectedToken {
+			t.Errorf("%s: got = %q, want %q", tc.name, gotValue, tc.expectedToken)
+		}
 	}
 }

@@ -3,6 +3,8 @@ package auth
 
 import (
 	"errors"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -109,4 +111,42 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 	// return userid (subject) as uuid from the populate claims
 	// validation confirms which user this JWT belongs to
 	return userID, nil
+}
+
+// BEARER TOKEN
+// checks the client's token from the header!
+func GetBearerToken(headers http.Header) (string, error) {
+	// get that header type
+	authHeader := headers.Get("Authorization") // .Get() is a method that works on http.Header
+
+	// if not "Get"ed, .Get() will return an empty string
+	if authHeader == "" {
+		return "", errors.New("missing authorization header")
+	}
+
+	// split the authHeader to get all terms
+	headerFields := strings.Fields(authHeader) // get each term regardless of whitespace
+	// NOTE: string.Split(...," ") doesn't handle multiple spaces
+	// NOTE: string.TrimSpace(...) only handles whitespace at start adn end
+
+	// check that header contains 2 words!
+	if len(headerFields) != 2 {
+		return "", errors.New("invalid authorization header")
+	} // else we get indexerror
+
+	// check auth type
+	if headerFields[0] != "Bearer" {
+		return "", errors.New("missing authorization header")
+	}
+
+	// check token string length not empty
+	if headerFields[1] == "" {
+		return "", errors.New("missing token string")
+	}
+
+	// get client's JWT token string auth type
+	tokenString := headerFields[1]
+
+	// return string and success
+	return tokenString, nil
 }

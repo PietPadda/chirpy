@@ -28,8 +28,11 @@ type JsonChirpRequest struct {
 
 // UserLogin request
 type JsonLoginRequest struct {
-	Password string `json:"password"`
-	Email    string `json:"email"`
+	Password         string `json:"password"`
+	Email            string `json:"email"`
+	ExpiresInSeconds *int64 `json:"expires_in_seconds"`
+	// int64 stays the same length, regardless if 32bit or 64bit system!
+	// ptr allows us to check if nil, thus "optional"
 }
 
 // RESPONSES
@@ -57,6 +60,7 @@ type JsonLoginResponse struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Email     string    `json:"email"`
+	Token     string    `json:"token"`
 }
 
 // Client chirp response

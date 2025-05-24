@@ -8,6 +8,7 @@ import (
 	"log"      // for err logging
 	"net/http" // http protocol
 	"os"       // for io
+	"strings"
 	"time"
 
 	// for conv itoa or atoi
@@ -26,6 +27,7 @@ type apiConfig struct {
 	fileserverHits atomic.Int32
 	db             *database.Queries
 	platform       string
+	serverKey      string
 }
 
 // user database struct
@@ -44,6 +46,7 @@ func main() {
 	// get fields from .env file
 	dbURL := os.Getenv("DB_URL")
 	appPlatform := os.Getenv("PLATFORM")
+	secretKey := strings.TrimSpace(os.Getenv("SECRET_KEY")) // remove whitespace from start and finish!
 	// reaches into os env and gets the value at key
 
 	// dbURL check
@@ -54,6 +57,11 @@ func main() {
 	// Platform check
 	if appPlatform == "" {
 		log.Fatal("Platform is not set")
+	}
+
+	// secret key check
+	if secretKey == "" {
+		log.Fatal("SECRET_KEY is not set")
 	}
 
 	// open connection to your database using the DBUrl and driver
@@ -77,8 +85,9 @@ func main() {
 	// create apiConfig instance
 	apiCfg := apiConfig{
 		fileserverHits: atomic.Int32{}, // explicitly set to 0
-		db:             dbQueries,      // init the dbqueries for use in our handler
+		db:             dbQueries,      // init the DBqueries for use in our handler
 		platform:       appPlatform,    // init the platform for handler auth
+		serverKey:      secretKey,      // init the server key for handler auth
 	}
 
 	// create the file server handle

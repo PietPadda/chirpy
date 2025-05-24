@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"time"
 
 	// our internal package
 	// postgresql db access
@@ -172,6 +173,20 @@ func (apiCfg *apiConfig) handlerUserLogin(w http.ResponseWriter, req *http.Reque
 		return // early return
 	}
 
+	// set default expiration time
+	expiresDuration := 3600 * time.Second
+
+	// check if expires_in_seconds is set (*int64 type)
+	if reqLogin.ExpiresInSeconds != nil {
+		// create expires
+		expires := time.Duration(*reqLogin.ExpiresInSeconds) * time.Second
+
+		// check if within bounds, set to user value
+		if expires >= 60*time.Second && expires <= 3600*time.Second {
+			expiresDuration = expires // update default to new time
+		} // else just use default
+	}
+
 	// reqLogin is now successfully populated
 
 	// get the user by email
@@ -199,12 +214,24 @@ func (apiCfg *apiConfig) handlerUserLogin(w http.ResponseWriter, req *http.Reque
 		return // early return
 	}
 
+	// make JWT token
+	tokenString, err := auth.MakeJWT(loginUser.ID, apiCfg.serverKey, expiresDuration)
+
+	// check make jwt
+	if err != nil {
+		log.Printf("Error making JWT token: %s", err) // log msg with err
+		// helper to insert error msg + 500 internal server error status code
+		WriteJSONError(w, "Internal server token generation error", http.StatusInternalServerError)
+		return // early return
+	}
+
 	// json response payload
 	respLogin := JsonLoginResponse{
 		ID:        loginUser.ID,
 		CreatedAt: loginUser.CreatedAt,
 		UpdatedAt: loginUser.UpdatedAt,
 		Email:     loginUser.Email,
+		Token:     tokenString,
 	}
 
 	// helper to insert body response + 200 ok  status code
