@@ -130,6 +130,10 @@ func main() {
 	mux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.handlerGetChirp) // register func that receives apiCfg
 	// GET HTTP method routing only
 
+	// register handlerDeleteChirp, using /api/chirps/{chirpID} system endpoint
+	mux.HandleFunc("DELETE /api/chirps/{chirpID}", apiCfg.handlerDeleteChirp) // register func that receives apiCfg
+	// DELETE HTTP method routing only
+
 	// register handlerCreateUser, using /api/users system endpoint
 	mux.HandleFunc("POST /api/users", apiCfg.handlerCreateUser) // register func that receives apiCfg
 	// POST HTTP method routing only

@@ -24,3 +24,17 @@ ORDER BY created_at ASC;
 SELECT * FROM chirps
 -- by chirp id as input
 WHERE id = $1;
+
+-- name: DeleteChirp :one 
+-- delete chirp by id
+DELETE FROM chirps
+-- where clause to filter record 
+WHERE id = $1        -- matches chirp_id 
+RETURNING *;         -- get the deleted record from chirps table!
+
+-- name: GetUserIDByChirpID :one
+-- select one user by chirp_id
+SELECT user_id FROM chirps
+-- by chirp id as input
+WHERE id = $1 -- user chirp id to get user
+LIMIT 1;

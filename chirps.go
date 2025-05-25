@@ -126,6 +126,106 @@ func (apiCfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, req *http.Req
 	WriteJSONResponse(w, respChirp, http.StatusCreated)
 }
 
+// DeleteChirp handler that deletes a chirp
+func (apiCfg *apiConfig) handlerDeleteChirp(w http.ResponseWriter, req *http.Request) {
+	// HTTP method check
+	if req.Method != "DELETE" {
+		// helper to insert error msg + 405 invalid method status code
+		WriteJSONError(w, "Chirp must be DELETEted", http.StatusMethodNotAllowed)
+		return // early return
+	}
+
+	// no json request from client, get chirp_api from endpoint path
+	urlSplit := strings.Split(req.URL.Path, "/") // split by /
+
+	// valid path check
+	if len(urlSplit) != 4 { // we explicitly only tolerate /api/chirps/{chirpID}, nothing else
+		log.Printf("Error api endpoint path incorrect length: %v", len(urlSplit)) // log msg with err
+		// helper to insert error msg + 400 bad request status code
+		WriteJSONError(w, "Invalid API endpoint path", http.StatusBadRequest)
+		return // early return
+	}
+
+	// check empty path chirp id check
+	if urlSplit[3] == "" {
+		log.Printf("Error api endpoint path chirp id empty: %v", len(urlSplit)) // log msg with err
+		// helper to insert error msg + 400 bad request status code
+		WriteJSONError(w, "Missing chirp id in endpoint", http.StatusBadRequest)
+		return // early return
+	}
+
+	// know path is /api/chirps/${chirpID}, so get index 3 (1st / counts)
+	chirpID := urlSplit[3] // last item in split path string
+
+	// conv chirpID to int then uuid
+	chirpUUID, err := uuid.Parse(chirpID)
+
+	// chirp id to uuid check
+	if err != nil {
+		log.Printf("Error conv chirp id to uuid: %s", err) // log msg with err
+		// helper to insert error msg + 400 bad request status code
+		WriteJSONError(w, "Invalid Chirp id", http.StatusBadRequest)
+		return // early return
+	}
+
+	// authenticate before decoding request
+	token, err := auth.GetBearerToken(req.Header) // get the bearer's token
+
+	// get token check
+	if err != nil {
+		log.Printf("Error getting bearer token: %s", err) // log msg with err
+		// helper to insert error msg + 401 unauthorized status code
+		WriteJSONError(w, "Unauthorized access", http.StatusUnauthorized)
+		return // early return
+	}
+
+	// validate the JWT token after getting bearer's token
+	uuidJWTValidated, err := auth.ValidateJWT(token, apiCfg.serverKey) // pass in tokenstring and server secret
+
+	// jwt validation check
+	if err != nil {
+		log.Printf("Error validating JWT token: %s", err) // log msg with err
+		// helper to insert error msg + 401 unauthorized status code
+		WriteJSONError(w, "Unauthorized access", http.StatusUnauthorized)
+		return // early return
+	}
+
+	// get chirp author id
+	uuidChirpAuthor, err := apiCfg.db.GetUserIDByChirpID(req.Context(), chirpUUID)
+
+	// get chirp author id check
+	if err != nil {
+		log.Printf("Error chirp not found: %s", err) // log msg with err
+		// helper to insert error msg + 404 not found status code
+		WriteJSONError(w, "Chirp not found", http.StatusNotFound)
+		return // early return
+	}
+
+	// confirm chirp author id matches the JWT validated id
+	if uuidChirpAuthor != uuidJWTValidated {
+		log.Printf("Error chirp author id (%v) doesn't match JWT validated user id (%v)", uuidChirpAuthor, uuidJWTValidated) // log msg with err)", err) // log msg with err
+		// helper to insert error msg + 403 forbidden status code
+		WriteJSONError(w, "Unauthorized access", http.StatusForbidden)
+		return // early return
+	}
+
+	// proceed to delete the chirp
+	deletedChirp, err := apiCfg.db.DeleteChirp(req.Context(), chirpUUID)
+
+	// delete chirp check
+	if err != nil {
+		// handle gracefully
+		log.Printf("Error could not delete chirp: %s", err) // msg to server admin
+		// send msg to client code 500
+		WriteJSONError(w, "Server couldn't delete chirp", http.StatusInternalServerError)
+		return // stop processing req
+	}
+
+	// write to server and client that chirp deleted
+	log.Printf("Chirp has been deleted: ID = %s", deletedChirp.ID) // log msg with err
+	w.WriteHeader(http.StatusNoContent)                            // status code 204 to client
+}
+
 // GetChirps handler that returns all chirps!
 func (apiCfg *apiConfig) handlerGetChirps(w http.ResponseWriter, req *http.Request) {
 	// apiConfig check
