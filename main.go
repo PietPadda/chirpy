@@ -138,6 +138,14 @@ func main() {
 	mux.HandleFunc("POST /api/login", apiCfg.handlerUserLogin) // register func that receives apiCfg
 	// POST HTTP method routing only
 
+	// register handlerRefresh, using /api/refresh system endpoint
+	mux.HandleFunc("POST /api/refresh", apiCfg.handlerRefresh) // register func that receives apiCfg
+	// POST HTTP method routing only
+
+	// register handlerRevoke, using /api/revoke system endpoint
+	mux.HandleFunc("POST /api/revoke", apiCfg.handlerRevoke) // register func that receives apiCfg
+	// POST HTTP method routing only
+
 	// create Server struct for config
 	server := &http.Server{ //ptr is more efficient than new copy
 		Addr:    ":" + port, //server listens to port 8080 for all incoming requests

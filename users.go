@@ -173,19 +173,8 @@ func (apiCfg *apiConfig) handlerUserLogin(w http.ResponseWriter, req *http.Reque
 		return // early return
 	}
 
-	// set default expiration time
-	expiresDuration := 3600 * time.Second
-
-	// check if expires_in_seconds is set (*int64 type)
-	if reqLogin.ExpiresInSeconds != nil {
-		// create expires
-		expires := time.Duration(*reqLogin.ExpiresInSeconds) * time.Second
-
-		// check if within bounds, set to user value
-		if expires >= 60*time.Second && expires <= 3600*time.Second {
-			expiresDuration = expires // update default to new time
-		} // else just use default
-	}
+	// set default expiration time for JWT
+	expiresDuration := 3600 * time.Second // 1 hour
 
 	// reqLogin is now successfully populated
 
@@ -225,13 +214,44 @@ func (apiCfg *apiConfig) handlerUserLogin(w http.ResponseWriter, req *http.Reque
 		return // early return
 	}
 
+	// generate a refresh token
+	tokenRefreshString, err := auth.MakeRefreshToken()
+
+	// check generate refresh token
+	if err != nil {
+		log.Printf("Error making refresh token: %s", err) // log msg with err
+		// helper to insert error msg + 500 internal server error status code
+		WriteJSONError(w, "Internal server refresh token generation error", http.StatusInternalServerError)
+		return // early return
+	}
+
+	// set default expiration time for refresh token
+	expiresRefreshDuration := 60 * 24 * time.Hour                           // 60 days
+	expiresRefreshTimestamp := time.Now().UTC().Add(expiresRefreshDuration) // conv to timestamp for PostgreSQL
+
+	// add refresh token to the db
+	_, err = apiCfg.db.CreateRefreshToken(req.Context(), database.CreateRefreshTokenParams{
+		Token:     tokenRefreshString,      // add refresh token string
+		UserID:    loginUser.ID,            // set to correct user
+		ExpiresAt: expiresRefreshTimestamp, // conv to postgresql time
+	})
+
+	// create refresh token check
+	if err != nil {
+		log.Printf("Error adding refresh token to database: %s", err) // log msg with err
+		// helper to insert error msg + 500 internal server error status code
+		WriteJSONError(w, "Internal server refresh token adding to database error", http.StatusInternalServerError)
+		return // early return
+	}
+
 	// json response payload
 	respLogin := JsonLoginResponse{
-		ID:        loginUser.ID,
-		CreatedAt: loginUser.CreatedAt,
-		UpdatedAt: loginUser.UpdatedAt,
-		Email:     loginUser.Email,
-		Token:     tokenString,
+		ID:           loginUser.ID,
+		CreatedAt:    loginUser.CreatedAt,
+		UpdatedAt:    loginUser.UpdatedAt,
+		Email:        loginUser.Email,
+		Token:        tokenString,
+		RefreshToken: tokenRefreshString,
 	}
 
 	// helper to insert body response + 200 ok  status code

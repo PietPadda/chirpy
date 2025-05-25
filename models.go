@@ -28,11 +28,12 @@ type JsonChirpRequest struct {
 
 // UserLogin request
 type JsonLoginRequest struct {
-	Password         string `json:"password"`
-	Email            string `json:"email"`
-	ExpiresInSeconds *int64 `json:"expires_in_seconds"`
+	Password string `json:"password"`
+	Email    string `json:"email"`
+	// ExpiresInSeconds *int64 `json:"expires_in_seconds"`
 	// int64 stays the same length, regardless if 32bit or 64bit system!
 	// ptr allows us to check if nil, thus "optional"
+	// removed optional timer
 }
 
 // RESPONSES
@@ -56,11 +57,12 @@ type JsonUserResponse struct {
 
 // Client login successful response
 type JsonLoginResponse struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Email     string    `json:"email"`
-	Token     string    `json:"token"`
+	ID           uuid.UUID `json:"id"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+	Email        string    `json:"email"`
+	Token        string    `json:"token"`
+	RefreshToken string    `json:"refresh_token"`
 }
 
 // Client chirp response
@@ -70,4 +72,9 @@ type JsonChirpResponse struct {
 	UpdatedAt time.Time `json:"updated_at"`
 	Body      string    `json:"body"`
 	UserID    uuid.UUID `json:"user_id"`
+}
+
+// Client refresh response
+type JsonRefreshResponse struct {
+	Token string `json:"token"`
 }
