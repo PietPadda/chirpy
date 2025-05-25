@@ -134,6 +134,10 @@ func main() {
 	mux.HandleFunc("POST /api/users", apiCfg.handlerCreateUser) // register func that receives apiCfg
 	// POST HTTP method routing only
 
+	// register handlerUpdateUser, using /api/users system endpoint
+	mux.HandleFunc("PUT /api/users", apiCfg.handlerUpdateUser) // register func that receives apiCfg
+	// PUT HTTP method routing only
+
 	// register handlerLoginUser, using /api/users system endpoint
 	mux.HandleFunc("POST /api/login", apiCfg.handlerUserLogin) // register func that receives apiCfg
 	// POST HTTP method routing only

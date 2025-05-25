@@ -55,6 +55,13 @@ type JsonUserResponse struct {
 	Email     string    `json:"email"`
 }
 
+// Client user updated response
+type JsonUserUpdatedResponse struct {
+	ID        uuid.UUID `json:"id"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Email     string    `json:"email"`
+}
+
 // Client login successful response
 type JsonLoginResponse struct {
 	ID           uuid.UUID `json:"id"`

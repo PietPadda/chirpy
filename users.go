@@ -124,6 +124,155 @@ func (apiCfg *apiConfig) handlerCreateUser(w http.ResponseWriter, req *http.Requ
 	WriteJSONResponse(w, respUser, http.StatusCreated)
 }
 
+// UpdateUser handler that updates user login details
+// we use apiConfig as receiver to access the database!
+func (apiCfg *apiConfig) handlerUpdateUser(w http.ResponseWriter, req *http.Request) {
+	// apiConfig check
+	if apiCfg == nil {
+		// handle gracefully
+		log.Printf("Internal server error: apiCfg is nil") // msg to server admin
+		// send msg to client code 500
+		WriteJSONError(w, "Internal server configuration error", http.StatusInternalServerError)
+		return // stop processing req
+	}
+
+	// HTTP method check
+	if req.Method != "PUT" {
+		// helper to insert error msg + 405 invalid method status code
+		WriteJSONError(w, "User update must be PUTed", http.StatusMethodNotAllowed)
+		return // early return
+	}
+
+	// json request from client
+	var reqUpdate JsonUserRequest
+
+	// authenticate before decoding request
+	token, err := auth.GetBearerToken(req.Header) // get the bearer's token
+
+	// get token check
+	if err != nil {
+		log.Printf("Error getting bearer token: %s", err) // log msg with err
+		// helper to insert error msg + 401 unauthorized status code
+		WriteJSONError(w, "Unauthorized access", http.StatusUnauthorized)
+		return // early return
+	}
+
+	// validate the JWT token after getting bearer's token
+	uuidJWTValidated, err := auth.ValidateJWT(token, apiCfg.serverKey) // pass in tokenstring and server secret
+
+	// jwt validation check
+	if err != nil {
+		log.Printf("Error validating JWT token: %s", err) // log msg with err
+		// helper to insert error msg + 401 unauthorized status code
+		WriteJSONError(w, "Unauthorized access", http.StatusUnauthorized)
+		return // early return
+	}
+
+	// create json req body decoder
+	decoder := json.NewDecoder(req.Body)
+
+	// close on exit to prevent mem leak
+	defer req.Body.Close()
+
+	// decode the req body
+	err = decoder.Decode(&reqUpdate)
+
+	// request body missing edge case check (before general error check)
+	if err == io.EOF { // end of file
+		log.Printf("Error empty request body: %s", err) // log msg with err
+		// helper to insert error msg + 400 bad req status code
+		WriteJSONError(w, "Email is empty", http.StatusBadRequest)
+		return // early return
+	}
+
+	// decode check
+	if err != nil {
+		// an error will be thrown if the JSON is invalid or has the wrong types
+		// any missing fields will simply have their values in the struct set to their zero value
+
+		log.Printf("Error decoding parameters: %s", err) // log msg with err
+		// helper to insert error msg + 400 bad req status code
+		WriteJSONError(w, "Something went wrong", http.StatusBadRequest)
+		return // early return
+	}
+
+	// reqEmail is now successfully populated
+
+	// check email empty
+	if len(reqUpdate.Email) == 0 {
+		// helper to insert error msg + 400 bad req status code
+		WriteJSONError(w, "Email is empty", http.StatusBadRequest)
+		return // early return
+	}
+
+	// hash the UPDATED password
+	hash, err := auth.HashPassword(reqUpdate.Password)
+
+	// hash check
+	if err != nil {
+		log.Printf("Error hashing password: %s", err) // log msg with err
+		// helper to insert error msg + 500 internal error status code
+		WriteJSONError(w, "Internal server error", http.StatusInternalServerError) // generic message
+		return                                                                     // early return
+	}
+
+	// get user CURRENT details using VALIDATED id
+	currentDetails, err := apiCfg.db.GetUserByID(req.Context(), uuidJWTValidated)
+
+	// get current user details check
+	if err != nil {
+		log.Printf("Error getting current user details: %s", err)                  // log msg with err
+		WriteJSONError(w, "Internal server error", http.StatusInternalServerError) // generic message
+		return                                                                     // early return
+	}
+
+	// check if email OR password didn't change (at least 1 one must, should update if NOT actually updating!)
+	if reqUpdate.Email == currentDetails.Email && hash == currentDetails.HashedPassword { // if both the same
+		log.Printf("Error email or password didn't change: %s", err) // log msg with err
+		// helper to insert error msg + 400 bad request error status code
+		WriteJSONError(w, "Email or password didn't change", http.StatusBadRequest) // generic message
+		return                                                                      // early return
+	}
+
+	// create new user using sqlc function
+	userUpdatedAt, err := apiCfg.db.UpdateUserLogin(req.Context(), database.UpdateUserLoginParams{
+		ID:             uuidJWTValidated, // from get userID from validated token
+		HashedPassword: hash,             // hashed password
+		Email:          reqUpdate.Email,  // directly  user input
+	})
+
+	// ENSURE EMAIL IS UNIQUE (to handle error gracefully)
+	pqErr, isPQError := err.(*pq.Error)
+
+	// handle specific error first
+	// check if url duplication occurred
+	if isPQError && pqErr.Code == "23505" {
+		// the error exists and it matches the PostgreSQL code for unique duplication
+		// graceful degradation
+		log.Printf("Error updating user: %s", err)
+		WriteJSONError(w, "User email is already used", http.StatusBadRequest)
+		return // early return
+	}
+
+	// update user check (general)
+	if err != nil {
+		log.Printf("Error updating user: %s", err) // log msg with err
+		// helper to insert error msg + 400 bad req status code
+		WriteJSONError(w, "Error occurred updating user", http.StatusBadRequest)
+		return // early return
+	}
+
+	// json response payload
+	respUser := JsonUserUpdatedResponse{
+		ID:        uuidJWTValidated, // from get userID from validated token
+		UpdatedAt: userUpdatedAt,    // from sqlc code, only return
+		Email:     reqUpdate.Email,  // from client request struct
+	}
+
+	// helper to insert body response + 200 ok status code
+	WriteJSONResponse(w, respUser, http.StatusOK)
+}
+
 // LoginUser handler that allows user login by password and email
 func (apiCfg *apiConfig) handlerUserLogin(w http.ResponseWriter, req *http.Request) {
 	// apiConfig check

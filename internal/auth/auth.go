@@ -17,6 +17,11 @@ import (
 // PASSWORD HASHING
 // func to hash a user's password
 func HashPassword(password string) (string, error) {
+	// handle empty password
+	if password == "" {
+		return "", errors.New("empty password") // early return
+	}
+
 	// use bcrypt's pw gen -- accepts a byte (max 72) and cost (1-31)
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 

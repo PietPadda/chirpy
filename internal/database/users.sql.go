@@ -7,6 +7,9 @@ package database
 
 import (
 	"context"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 const createUser = `-- name: CreateUser :one
@@ -64,6 +67,27 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 	return i, err
 }
 
+const getUserByID = `-- name: GetUserByID :one
+SELECT id, created_at, updated_at, email, hashed_password FROM users
+WHERE id = $1
+LIMIT 1
+`
+
+// select one user by user_id
+// by user id as input
+func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByID, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Email,
+		&i.HashedPassword,
+	)
+	return i, err
+}
+
 const resetUsers = `-- name: ResetUsers :exec
 DELETE FROM users
 `
@@ -72,4 +96,28 @@ DELETE FROM users
 func (q *Queries) ResetUsers(ctx context.Context) error {
 	_, err := q.db.ExecContext(ctx, resetUsers)
 	return err
+}
+
+const updateUserLogin = `-- name: UpdateUserLogin :one
+UPDATE users 
+SET 
+  updated_at = NOW(),  -- audit trail
+  email = $2, -- user provides new email
+  hashed_password = $3 -- user provides new password
+WHERE id = $1 -- use userid from token get bearer (unique as it's a pk) 
+RETURNING updated_at
+`
+
+type UpdateUserLoginParams struct {
+	ID             uuid.UUID
+	Email          string
+	HashedPassword string
+}
+
+// return only updated_at to match resp timestamp (rest are inputs from code, no need to return)
+func (q *Queries) UpdateUserLogin(ctx context.Context, arg UpdateUserLoginParams) (time.Time, error) {
+	row := q.db.QueryRowContext(ctx, updateUserLogin, arg.ID, arg.Email, arg.HashedPassword)
+	var updated_at time.Time
+	err := row.Scan(&updated_at)
+	return updated_at, err
 }

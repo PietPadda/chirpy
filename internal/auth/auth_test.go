@@ -43,6 +43,15 @@ func TestHashPassword(t *testing.T) {
 	if hash == hash2 {
 		t.Errorf("HashPassword produced duplicated hashes")
 	}
+
+	// attempt to create empty password
+	_, err = HashPassword("")
+	// no need for err, already tested
+
+	// empty password check
+	if err == nil { // if it succeeded
+		t.Errorf("HashPassword allowed empty password")
+	}
 }
 
 // test pw hash compare

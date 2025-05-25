@@ -23,3 +23,20 @@ SELECT * FROM users
 -- by user email as input
 WHERE email = $1
 LIMIT 1;
+
+-- name: UpdateUserLogin :one 
+UPDATE users 
+SET 
+  updated_at = NOW(),  -- audit trail
+  email = $2, -- user provides new email
+  hashed_password = $3 -- user provides new password
+WHERE id = $1 -- use userid from token get bearer (unique as it's a pk) 
+-- return only updated_at to match resp timestamp (rest are inputs from code, no need to return)
+RETURNING updated_at;
+
+-- name: GetUserByID :one
+-- select one user by user_id
+SELECT * FROM users
+-- by user id as input
+WHERE id = $1
+LIMIT 1;
