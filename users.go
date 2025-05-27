@@ -114,10 +114,11 @@ func (apiCfg *apiConfig) handlerCreateUser(w http.ResponseWriter, req *http.Requ
 
 	// json response payload
 	respUser := JsonUserResponse{
-		ID:        newUser.ID,
-		CreatedAt: newUser.CreatedAt,
-		UpdatedAt: newUser.UpdatedAt,
-		Email:     newUser.Email,
+		ID:          newUser.ID,
+		CreatedAt:   newUser.CreatedAt,
+		UpdatedAt:   newUser.UpdatedAt,
+		Email:       newUser.Email,
+		IsChirpyRed: newUser.IsChirpyRed,
 	}
 
 	// helper to insert body response + 201 created status code
@@ -264,9 +265,10 @@ func (apiCfg *apiConfig) handlerUpdateUser(w http.ResponseWriter, req *http.Requ
 
 	// json response payload
 	respUser := JsonUserUpdatedResponse{
-		ID:        uuidJWTValidated, // from get userID from validated token
-		UpdatedAt: userUpdatedAt,    // from sqlc code, only return
-		Email:     reqUpdate.Email,  // from client request struct
+		ID:          uuidJWTValidated, // from get userID from validated token
+		UpdatedAt:   userUpdatedAt,    // from sqlc code, only return
+		Email:       reqUpdate.Email,  // from client request struct
+		IsChirpyRed: currentDetails.IsChirpyRed,
 	}
 
 	// helper to insert body response + 200 ok status code
@@ -394,13 +396,14 @@ func (apiCfg *apiConfig) handlerUserLogin(w http.ResponseWriter, req *http.Reque
 	}
 
 	// json response payload
-	respLogin := JsonLoginResponse{
+	respLogin := JsonUserLoginResponse{
 		ID:           loginUser.ID,
 		CreatedAt:    loginUser.CreatedAt,
 		UpdatedAt:    loginUser.UpdatedAt,
 		Email:        loginUser.Email,
 		Token:        tokenString,
 		RefreshToken: tokenRefreshString,
+		IsChirpyRed:  loginUser.IsChirpyRed,
 	}
 
 	// helper to insert body response + 200 ok  status code

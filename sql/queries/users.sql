@@ -40,3 +40,13 @@ SELECT * FROM users
 -- by user id as input
 WHERE id = $1
 LIMIT 1;
+
+-- name: SetIsChirpyRedTrue :one
+-- set user is_chirp_red to true
+UPDATE users
+SET
+  is_chirpy_red = TRUE, -- now premium!
+  updated_at = NOW()   -- audit trail
+-- by user id as input
+WHERE id = $1
+RETURNING id, is_chirpy_red;

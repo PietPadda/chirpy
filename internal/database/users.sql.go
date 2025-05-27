@@ -22,7 +22,7 @@ VALUES (
     $1,                -- gen code will input email
     $2                 -- insert hashed pw via handler
 )
-RETURNING id, created_at, updated_at, email, hashed_password
+RETURNING id, created_at, updated_at, email, hashed_password, is_chirpy_red
 `
 
 type CreateUserParams struct {
@@ -42,12 +42,13 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.UpdatedAt,
 		&i.Email,
 		&i.HashedPassword,
+		&i.IsChirpyRed,
 	)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, created_at, updated_at, email, hashed_password FROM users
+SELECT id, created_at, updated_at, email, hashed_password, is_chirpy_red FROM users
 WHERE email = $1
 LIMIT 1
 `
@@ -63,12 +64,13 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.UpdatedAt,
 		&i.Email,
 		&i.HashedPassword,
+		&i.IsChirpyRed,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, created_at, updated_at, email, hashed_password FROM users
+SELECT id, created_at, updated_at, email, hashed_password, is_chirpy_red FROM users
 WHERE id = $1
 LIMIT 1
 `
@@ -84,6 +86,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.UpdatedAt,
 		&i.Email,
 		&i.HashedPassword,
+		&i.IsChirpyRed,
 	)
 	return i, err
 }
@@ -96,6 +99,29 @@ DELETE FROM users
 func (q *Queries) ResetUsers(ctx context.Context) error {
 	_, err := q.db.ExecContext(ctx, resetUsers)
 	return err
+}
+
+const setIsChirpyRedTrue = `-- name: SetIsChirpyRedTrue :one
+UPDATE users
+SET
+  is_chirpy_red = TRUE, -- now premium!
+  updated_at = NOW()   -- audit trail
+WHERE id = $1
+RETURNING id, is_chirpy_red
+`
+
+type SetIsChirpyRedTrueRow struct {
+	ID          uuid.UUID
+	IsChirpyRed bool
+}
+
+// set user is_chirp_red to true
+// by user id as input
+func (q *Queries) SetIsChirpyRedTrue(ctx context.Context, id uuid.UUID) (SetIsChirpyRedTrueRow, error) {
+	row := q.db.QueryRowContext(ctx, setIsChirpyRedTrue, id)
+	var i SetIsChirpyRedTrueRow
+	err := row.Scan(&i.ID, &i.IsChirpyRed)
+	return i, err
 }
 
 const updateUserLogin = `-- name: UpdateUserLogin :one

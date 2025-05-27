@@ -103,11 +103,7 @@ func main() {
 	// mux.Handle("/app/", ...) -- server handle all requests
 
 	// REGISTER HANDLERS
-	// register handlerReadiness, using /api/healthz system endpoint
-	mux.HandleFunc("GET /api/healthz", handlerReadiness)
-	// GET HTTP method routing only
-	// healthz, because "system endpoint" convention!
-
+	// ADMIN ONLY HANDLERS
 	// register handlerMetrics, using /admin/metrics system endpoint
 	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics) // register func that receives apiCfg
 	// GET HTTP method routing only
@@ -118,6 +114,13 @@ func main() {
 	// POST HTTP method routing only
 	// reset, no z as this is a conventional name!
 
+	// SYSTEM READINESS HANDLERS
+	// register handlerReadiness, using /api/healthz system endpoint
+	mux.HandleFunc("GET /api/healthz", handlerReadiness)
+	// GET HTTP method routing only
+	// healthz, because "system endpoint" convention!
+
+	// CHIRPS HANDLERS
 	// register handlerCreateChirp, using /api/chirps system endpoint
 	mux.HandleFunc("POST /api/chirps", apiCfg.handlerCreateChirp) // register func that receives apiCfg
 	// POST HTTP method routing only
@@ -134,6 +137,7 @@ func main() {
 	mux.HandleFunc("DELETE /api/chirps/{chirpID}", apiCfg.handlerDeleteChirp) // register func that receives apiCfg
 	// DELETE HTTP method routing only
 
+	// USERS HANDLERS
 	// register handlerCreateUser, using /api/users system endpoint
 	mux.HandleFunc("POST /api/users", apiCfg.handlerCreateUser) // register func that receives apiCfg
 	// POST HTTP method routing only
@@ -146,12 +150,18 @@ func main() {
 	mux.HandleFunc("POST /api/login", apiCfg.handlerUserLogin) // register func that receives apiCfg
 	// POST HTTP method routing only
 
+	// TOKENS HANDLERS
 	// register handlerRefresh, using /api/refresh system endpoint
 	mux.HandleFunc("POST /api/refresh", apiCfg.handlerRefresh) // register func that receives apiCfg
 	// POST HTTP method routing only
 
 	// register handlerRevoke, using /api/revoke system endpoint
 	mux.HandleFunc("POST /api/revoke", apiCfg.handlerRevoke) // register func that receives apiCfg
+	// POST HTTP method routing only
+
+	// WEBHOOK HANDLERS
+	// register handlerPolaWebhook, using /api/polka/webhooks system endpoint
+	mux.HandleFunc("POST /api/polka/webhooks", apiCfg.handlerPolkaWebhook) // register func that receives apiCfg
 	// POST HTTP method routing only
 
 	// create Server struct for config

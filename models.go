@@ -36,6 +36,14 @@ type JsonLoginRequest struct {
 	// removed optional timer
 }
 
+// Webhook Polka request to upgrade user
+type JsonPolkaWebhookRequest struct {
+	Event string   `json:"event"` // user.upgraded etc
+	Data  struct { // data struct for reliability
+		UserID uuid.UUID `json:"user_id"`
+	} `json:"data"`
+}
+
 // RESPONSES
 // API JSON Response to Client
 type JsonResponse struct {
@@ -49,27 +57,30 @@ type JsonResponseError struct {
 
 // Client user created response
 type JsonUserResponse struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Email     string    `json:"email"`
+	ID          uuid.UUID `json:"id"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	Email       string    `json:"email"`
+	IsChirpyRed bool      `json:"is_chirpy_red"`
 }
 
 // Client user updated response
 type JsonUserUpdatedResponse struct {
-	ID        uuid.UUID `json:"id"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Email     string    `json:"email"`
+	ID          uuid.UUID `json:"id"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	Email       string    `json:"email"`
+	IsChirpyRed bool      `json:"is_chirpy_red"`
 }
 
 // Client login successful response
-type JsonLoginResponse struct {
+type JsonUserLoginResponse struct {
 	ID           uuid.UUID `json:"id"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 	Email        string    `json:"email"`
 	Token        string    `json:"token"`
 	RefreshToken string    `json:"refresh_token"`
+	IsChirpyRed  bool      `json:"is_chirpy_red"`
 }
 
 // Client chirp response
