@@ -7,6 +7,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+
+	"github.com/PietPadda/chirpy/internal/auth"
 )
 
 // PolkaWebhook handler that sets user to premiums
@@ -16,6 +18,23 @@ func (apiCfg *apiConfig) handlerPolkaWebhook(w http.ResponseWriter, req *http.Re
 		log.Printf("Invalid HTTP method used: %s", req.Method) // log msg
 		w.WriteHeader(http.StatusMethodNotAllowed)             // status code 405 to client
 		return                                                 // early return
+	}
+
+	// before processing request, get api key from request header
+	webhookApiKey, err := auth.GetAPIKey(req.Header) // input header
+
+	// get api key check
+	if err != nil {
+		log.Printf("Error couldn't get webhook api key: %s", err) // log msg with err
+		w.WriteHeader(http.StatusUnauthorized)                    // status code 401 to client (500 is too revealing that it's malformed etc)
+		return                                                    // early return
+	}
+
+	// validate the api key
+	if webhookApiKey != apiCfg.apiKey {
+		log.Printf("Error api key is incorrect") // log msg (don't reveal key to server log)
+		w.WriteHeader(http.StatusUnauthorized)   // status code 401 to client
+		return                                   // early return
 	}
 
 	// json request from client
@@ -28,7 +47,7 @@ func (apiCfg *apiConfig) handlerPolkaWebhook(w http.ResponseWriter, req *http.Re
 	defer req.Body.Close()
 
 	// decode the req body
-	err := decoder.Decode(&reqChirpyRed)
+	err = decoder.Decode(&reqChirpyRed)
 
 	// request body missing edge case check (before general error check)
 	if err == io.EOF { // end of file
@@ -49,7 +68,7 @@ func (apiCfg *apiConfig) handlerPolkaWebhook(w http.ResponseWriter, req *http.Re
 
 	// wrong event check
 	if reqChirpyRed.Event != "user.upgraded" {
-		// write to server and client that chirp deleted
+		// write to server user is not premium, client gets 204 only
 		log.Printf("Incorrect event request: Event = %s", reqChirpyRed.Event) // log msg with err
 		w.WriteHeader(http.StatusNoContent)                                   // status code 204 to client
 		return                                                                // early return
@@ -57,7 +76,7 @@ func (apiCfg *apiConfig) handlerPolkaWebhook(w http.ResponseWriter, req *http.Re
 
 	// no user id provided check
 	if reqChirpyRed.Data.UserID.String() == "" { // stringified UUID
-		// write to server and client that chirp deleted
+		// write to server user has no id, client gets 204 only
 		log.Printf("Data does not include user id") // log msg with err
 		w.WriteHeader(http.StatusBadRequest)        // status code 400 to client
 		return                                      // early return

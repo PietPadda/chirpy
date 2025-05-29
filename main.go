@@ -24,10 +24,11 @@ import (
 // STRUCTS
 // stateful struct
 type apiConfig struct {
-	fileserverHits atomic.Int32
-	db             *database.Queries
-	platform       string
-	serverKey      string
+	fileserverHits atomic.Int32      // for metrics
+	db             *database.Queries // for db access
+	platform       string            // for role auth
+	serverKey      string            // for use auth
+	apiKey         string            // for webhook auth
 }
 
 // user database struct
@@ -47,6 +48,7 @@ func main() {
 	dbURL := os.Getenv("DB_URL")
 	appPlatform := os.Getenv("PLATFORM")
 	secretKey := strings.TrimSpace(os.Getenv("SECRET_KEY")) // remove whitespace from start and finish!
+	polkaKey := strings.TrimSpace(os.Getenv("POLKA_KEY"))   // remove ws
 	// reaches into os env and gets the value at key
 
 	// dbURL check
@@ -54,14 +56,19 @@ func main() {
 		log.Fatal("DB_URL is not set")
 	}
 
-	// Platform check
+	// role check
 	if appPlatform == "" {
 		log.Fatal("Platform is not set")
 	}
 
-	// secret key check
+	// server key check
 	if secretKey == "" {
 		log.Fatal("SECRET_KEY is not set")
+	}
+
+	// api key check
+	if polkaKey == "" {
+		log.Fatal("POLKA_KEY is not set")
 	}
 
 	// open connection to your database using the DBUrl and driver
@@ -88,6 +95,7 @@ func main() {
 		db:             dbQueries,      // init the DBqueries for use in our handler
 		platform:       appPlatform,    // init the platform for handler auth
 		serverKey:      secretKey,      // init the server key for handler auth
+		apiKey:         polkaKey,       // init the polka key for webhook auth
 	}
 
 	// create the file server handle

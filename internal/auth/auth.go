@@ -161,7 +161,7 @@ func GetBearerToken(headers http.Header) (string, error) {
 // REFRESH TOKEN
 // makes a refresh token for user
 func MakeRefreshToken() (string, error) {
-	// make zero'd slice wtih 32 bytes (which is 256 bits)
+	// make zero'd slice with 32 bytes (which is 256 bits)
 	key := make([]byte, 32)
 	// each byte is 8 bits, meaning 0-255 or 2^8
 
@@ -178,4 +178,42 @@ func MakeRefreshToken() (string, error) {
 
 	// return successfully made refresh token string
 	return encodedKey, nil
+}
+
+// WEBHOOK API KEY
+// checks the webhook's api key from the header!
+func GetAPIKey(headers http.Header) (string, error) {
+	// get that header type
+	authHeader := headers.Get("Authorization") // .Get() is a method that works on http.Header
+
+	// if not "Get"ed, .Get() will return an empty string
+	if authHeader == "" {
+		return "", errors.New("missing authorization header")
+	}
+
+	// split the authHeader to get all terms
+	headerFields := strings.Fields(authHeader) // get each term regardless of whitespace
+	// NOTE: string.Split(...," ") doesn't handle multiple spaces
+	// NOTE: string.TrimSpace(...) only handles whitespace at start adn end
+
+	// check that header contains 2 words!
+	if len(headerFields) != 2 {
+		return "", errors.New("invalid authorization header")
+	} // else we get indexerror
+
+	// check auth type
+	if headerFields[0] != "ApiKey" {
+		return "", errors.New("missing authorization header")
+	}
+
+	// check token string length not empty
+	if headerFields[1] == "" {
+		return "", errors.New("missing api key")
+	}
+
+	// get webhook's API key string auth type
+	apiKey := headerFields[1]
+
+	// return string and success
+	return apiKey, nil
 }
