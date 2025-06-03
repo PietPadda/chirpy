@@ -228,41 +228,68 @@ func (apiCfg *apiConfig) handlerDeleteChirp(w http.ResponseWriter, req *http.Req
 
 // GetChirps handler that returns all chirps!
 func (apiCfg *apiConfig) handlerGetChirps(w http.ResponseWriter, req *http.Request) {
-	// apiConfig check
+	// apiConfig check: Always validate essential dependencies first.
 	if apiCfg == nil {
-		// handle gracefully
-		log.Printf("Internal server error: apiCfg is nil") // msg to server admin
-		// send msg to client code 500
+		log.Printf("Internal server error: apiCfg is nil") // Log to server admin
 		WriteJSONError(w, "Internal server configuration error", http.StatusInternalServerError)
-		return // stop processing req
+		return // Stop processing
 	}
 
-	// HTTP method check
-	if req.Method != "GET" {
-		// helper to insert error msg + 405 invalid method status code
+	// HTTP method check: Ensure the correct HTTP verb is used.
+	if req.Method != http.MethodGet { // Use http.MethodGet constant for clarity
 		WriteJSONError(w, "Chirps must be GETted", http.StatusMethodNotAllowed)
-		return // early return
+		return // Early return
 	}
 
-	// get (all) chirps!
-	dbChirps, err := apiCfg.db.GetChirps(req.Context())
+	authorIDStr := req.URL.Query().Get("author_id") // Get optional query parameter
+	var dbChirps []database.Chirp                   // Initialize an empty chirp slice
+	var err error                                   // Declare error variable once
 
-	// get chirps check
-	if err != nil {
-		log.Printf("Error getting all chirps: %s", err) // log msg with err
-		// helper to insert error msg + 400 bad req status code
-		WriteJSONError(w, "Error occurred getting all chirps", http.StatusBadRequest)
-		return // early return
+	// Handle requests with an author_id query parameter
+	if len(authorIDStr) > 0 { // if a char is input
+		authorUUID, parseErr := uuid.Parse(authorIDStr)
+
+		// uuid check
+		if parseErr != nil {
+			log.Printf("Error converting author ID '%s' to UUID: %s", authorIDStr, parseErr)
+			WriteJSONError(w, "Invalid author ID format", http.StatusBadRequest)
+			return
+		}
+
+		// get chirps from optional author id para,
+		dbChirps, err = apiCfg.db.GetChirpsByAuthorID(req.Context(), authorUUID)
+
+		// get chirps by author check
+		if err != nil {
+			// If no rows are found, it means the author either doesn't exist or has no chirps.
+			// Returning 200 OK with an empty array is a common and user-friendly approach for no results.
+			if errors.Is(err, sql.ErrNoRows) { // check if no records
+				log.Printf("No chirps found for author ID: %s", authorUUID)
+				WriteJSONResponse(w, []JsonChirpResponse{}, http.StatusOK) // Return empty array
+				return
+			}
+			// For any other database error, it's an internal server issue.
+			log.Printf("Error getting chirps for author ID %s: %s", authorUUID, err)
+			WriteJSONError(w, "Failed to retrieve chirps by author", http.StatusInternalServerError)
+			return
+		}
+		// otherwise, no author id is provided
+	} else {
+		// Handle requests without an author_id query parameter (get all chirps)
+		dbChirps, err = apiCfg.db.GetChirps(req.Context())
+
+		// get chirps check
+		if err != nil {
+			log.Printf("Error getting all chirps: %s", err)
+			WriteJSONError(w, "Failed to retrieve all chirps", http.StatusInternalServerError)
+			return
+		}
 	}
 
-	// init a pre-allocated slice (not nil or zero!) all fields 0'd to store all chirps
+	// Transform database chirps into JSON response format
 	chirpResponses := make([]JsonChirpResponse, len(dbChirps))
-	// pre-alloc mem to # of chirps, no less, no more -- mem efficient!
-
-	// loop thru chirps and add each as an element
-	for i, dbChirp := range dbChirps {
-		// make a response for each chirp at index i
-		chirpResponses[i] = JsonChirpResponse{
+	for i, dbChirp := range dbChirps { // loop through field in each chirp
+		chirpResponses[i] = JsonChirpResponse{ // then populate the response
 			ID:        dbChirp.ID,
 			CreatedAt: dbChirp.CreatedAt,
 			UpdatedAt: dbChirp.UpdatedAt,
@@ -271,7 +298,7 @@ func (apiCfg *apiConfig) handlerGetChirps(w http.ResponseWriter, req *http.Reque
 		}
 	}
 
-	// helper to insert body response + 200 OK status code
+	// Send successful response
 	WriteJSONResponse(w, chirpResponses, http.StatusOK)
 }
 

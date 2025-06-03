@@ -122,6 +122,44 @@ func (q *Queries) GetChirps(ctx context.Context) ([]Chirp, error) {
 	return items, nil
 }
 
+const getChirpsByAuthorID = `-- name: GetChirpsByAuthorID :many
+SELECT id, created_at, updated_at, body, user_id FROM chirps
+WHERE user_id = $1 -- our input
+ORDER BY created_at ASC
+`
+
+// select all chirps! (from a single user_id only)
+// where clause to filter record
+// oldest to latest based on created_at
+func (q *Queries) GetChirpsByAuthorID(ctx context.Context, userID uuid.UUID) ([]Chirp, error) {
+	rows, err := q.db.QueryContext(ctx, getChirpsByAuthorID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Chirp
+	for rows.Next() {
+		var i Chirp
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Body,
+			&i.UserID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUserIDByChirpID = `-- name: GetUserIDByChirpID :one
 
 SELECT user_id FROM chirps

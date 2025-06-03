@@ -136,6 +136,7 @@ func main() {
 	// register handlerGetChirps, using /api/chirps system endpoint
 	mux.HandleFunc("GET /api/chirps", apiCfg.handlerGetChirps) // register func that receives apiCfg
 	// GET HTTP method routing only
+	// now handles author id query e.g. ?author_id=1
 
 	// register handlerGetChirp, using /api/chirps/{chirpID} system endpoint
 	mux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.handlerGetChirp) // register func that receives apiCfg

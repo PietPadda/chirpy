@@ -19,6 +19,14 @@ SELECT * FROM chirps
 -- oldest to latest based on created_at
 ORDER BY created_at ASC;
 
+-- name: GetChirpsByAuthorID :many
+-- select all chirps! (from a single user_id only)
+SELECT * FROM chirps
+-- where clause to filter record
+WHERE user_id = $1 -- our input
+-- oldest to latest based on created_at
+ORDER BY created_at ASC;
+
 -- name: GetChirp :one
 -- select one chirp by id
 SELECT * FROM chirps
