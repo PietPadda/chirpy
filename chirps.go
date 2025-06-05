@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"sort"
 	"strings"
 
 	"github.com/PietPadda/chirpy/internal/auth"
@@ -273,6 +274,7 @@ func (apiCfg *apiConfig) handlerGetChirps(w http.ResponseWriter, req *http.Reque
 			WriteJSONError(w, "Failed to retrieve chirps by author", http.StatusInternalServerError)
 			return
 		}
+
 		// otherwise, no author id is provided
 	} else {
 		// Handle requests without an author_id query parameter (get all chirps)
@@ -285,6 +287,20 @@ func (apiCfg *apiConfig) handlerGetChirps(w http.ResponseWriter, req *http.Reque
 			return
 		}
 	}
+
+	// handle optional SORT param
+	sortChirps := req.URL.Query().Get("sort") // Get optional query parameter
+
+	var sortFunc func(i, j int) bool // init the sort func
+	switch sortChirps {
+	case "desc":
+		sortFunc = func(i, j int) bool { return dbChirps[i].CreatedAt.After(dbChirps[j].CreatedAt) }
+	default: // anything else, make it ascending!
+		sortFunc = func(i, j int) bool { return dbChirps[i].CreatedAt.Before(dbChirps[j].CreatedAt) }
+	}
+
+	// sort the slice per optional parameter IN MEMORY
+	sort.Slice(dbChirps, sortFunc) // use our switch case anonymous func
 
 	// Transform database chirps into JSON response format
 	chirpResponses := make([]JsonChirpResponse, len(dbChirps))
